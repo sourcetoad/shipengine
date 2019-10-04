@@ -289,14 +289,11 @@ class Response extends ShipEngine\Api\Response
         return $this->packageCode;
     }
 
-<<<<<<< HEAD
     public function getCarrierCode(): ShipEngine\Carriers\CarrierCode
     {
         return $this->carrierCode;
     }
 
-=======
->>>>>>> d99a2c0... refactor: strict typehints
     public function isInternational(): bool
     {
         return $this->isInternational;
