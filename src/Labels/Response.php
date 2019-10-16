@@ -254,7 +254,7 @@ class Response extends ShipEngine\Api\Response
         return $this->totalCost;
     }
 
-    public function getTrackingNumber(): string
+    public function getTrackingNumber(): ?string
     {
         return $this->trackingNumber;
     }
