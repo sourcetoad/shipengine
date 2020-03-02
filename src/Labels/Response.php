@@ -90,7 +90,11 @@ class Response extends ShipEngine\Api\Response
     /**
      * The Carrier Code for this Label.
      *
+<<<<<<< HEAD
      * @var ShipEngine\Carriers\CarrierCode
+=======
+     * @var string
+>>>>>>> f63b1e4... fix: add missing "carrier_code" into label response
      */
     protected $carrierCode;
 
