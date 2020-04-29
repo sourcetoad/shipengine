@@ -22,6 +22,7 @@ use jsamhall\ShipEngine\Carriers\USPS\StampsDotCom;
 use jsamhall\ShipEngine\Labels\LabelId;
 use jsamhall\ShipEngine\Rating\Rate;
 use jsamhall\ShipEngine\Rating\RateId;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Class ShipEngine
@@ -91,7 +92,7 @@ class ShipEngine
 
         return array_map(function ($data) {
             return new AddressVerification\VerificationResult($data);
-        }, json_decode($response->getBody()->getContents(), 1));
+        }, $this->getResponseData($response));
     }
 
     /**
@@ -106,7 +107,7 @@ class ShipEngine
 
         $response = $this->client->post('addresses/validate', ['json' => $addressData]);
 
-        return new AddressVerification\VerificationResult(json_decode($response->getBody()->getContents(), 1)[0]);
+        return new AddressVerification\VerificationResult($this->getResponseData($response, 0));
     }
 
     /**
@@ -124,7 +125,7 @@ class ShipEngine
 
         return array_map(function ($carrier) {
             return new Carriers\Carrier($carrier);
-        }, json_decode($response->getBody()->getContents(), 1)['carriers']);
+        }, $this->getResponseData($response, 'carriers'));
     }
 
     /**
@@ -140,7 +141,7 @@ class ShipEngine
         $endpoint = sprintf("carriers/%s", $carrierId);
         $response = $this->client->get($endpoint);
 
-        return new Carriers\Carrier(json_decode($response->getBody()->getContents(), 1));
+        return new Carriers\Carrier($this->getResponseData($response));
     }
 
     /**
@@ -155,7 +156,7 @@ class ShipEngine
         $endpoint = sprintf('connections/carriers/%1$s/%2$s', $carrierCode, $carrierId);
         $response = $this->client->delete($endpoint);
 
-        return $response->getStatusCode();
+        return $this->isSuccessful($response);
     }
 
     /**
@@ -173,7 +174,7 @@ class ShipEngine
 
         return array_map(function ($carrier) {
             return new Carriers\Service($carrier);
-        }, json_decode($response->getBody()->getContents(), 1)['services']);
+        }, $this->getResponseData($response, 'services'));
     }
 
     /**
@@ -191,7 +192,7 @@ class ShipEngine
 
         return array_map(function ($carrier) {
             return new Carriers\PackageType($carrier);
-        }, json_decode($response->getBody()->getContents(), 1)['packages']);
+        }, $this->getResponseData($response, 'packages'));
     }
 
     /**
@@ -209,7 +210,7 @@ class ShipEngine
 
         return array_map(function ($carrier) {
             return new Carriers\AvailableOption($carrier);
-        }, json_decode($response->getBody()->getContents(), 1)['options']);
+        }, $this->getResponseData($response, 'options'));
     }
 
     /**
@@ -234,7 +235,7 @@ class ShipEngine
             ])
         ]);
 
-        return new Rating\RateResponse(json_decode($response->getBody()->getContents(), 1)['rate_response']);
+        return new Rating\RateResponse($this->getResponseData($response, 'rate_response'));
     }
 
     /**
@@ -250,7 +251,7 @@ class ShipEngine
         $endpoint = 'rates/' . $rateId;
         $response = $this->client->get($endpoint);
 
-        return new Rating\Rate(json_decode($response->getBody()->getContents(), 1));
+        return new Rating\Rate($this->getResponseData($response));
     }
 
     /**
@@ -271,7 +272,7 @@ class ShipEngine
             ])
         ]);
 
-        return new Labels\Response(json_decode($response->getBody()->getContents(), 1));
+        return new Labels\Response($this->getResponseData($response));
     }
 
     /**
@@ -295,7 +296,7 @@ class ShipEngine
             ]),
         ]);
 
-        return new Labels\Response(json_decode($response->getBody()->getContents(), 1));
+        return new Labels\Response($this->getResponseData($response));
     }
 
     /**
@@ -308,7 +309,7 @@ class ShipEngine
     {
         $response = $this->client->put('labels/' . (string) $label . '/void');
 
-        return new Labels\VoidResponse(json_decode($response->getBody()->getContents(), 1));
+        return new Labels\VoidResponse($this->getResponseData($response));
     }
 
     /**
@@ -325,7 +326,7 @@ class ShipEngine
             'json' => json_encode($stampsDotCom->toArray())
         ]);
 
-        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
+        return new CarrierId($this->getResponseData($response, 'carrier_id'));
     }
 
     /**
@@ -342,13 +343,13 @@ class ShipEngine
             'json' => json_encode($UPS->toArray())
         ]);
 
-        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
+        return new CarrierId($this->getResponseData($response, 'carrier_id'));
     }
 
     /**
      * @param CarrierId $carrierId
      * @param UpsSettings $settings
-     * @return Api\Response
+     * @return array
      * @throws RequestException
      * @throws ClientException
      */
@@ -359,7 +360,7 @@ class ShipEngine
         ]);
 
         // 4/29/2020 TODO: fix response for UPS adjustments
-        return json_decode($response->getBody()->getContents(), 1);
+        return $this->getResponseData($response);
     }
 
     /**
@@ -376,6 +377,22 @@ class ShipEngine
             'json' => json_encode($fedEx->toArray())
         ]);
 
-        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
+        return new CarrierId($this->getResponseData($response, 'carrier_id'));
+    }
+
+    public function isSuccessful(ResponseInterface $response): bool
+    {
+        $successful = [200, 201, 202, 203, 204];
+
+        return in_array($response->getStatusCode(), $successful);
+    }
+
+    private function getResponseData(ResponseInterface $data, $key = null)
+    {
+        $response = json_decode($data->getBody()->getContents(), 1);
+
+        return $key == null
+            ? $response
+            : $response[$key];
     }
 }
