@@ -10,6 +10,9 @@
  */
 namespace jsamhall\ShipEngine;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\RequestException;
 use jsamhall\ShipEngine\Carriers\CarrierId;
 use jsamhall\ShipEngine\Carriers\CarrierCode;
 use jsamhall\ShipEngine\Carriers\FedEx\FedEx;
@@ -28,16 +31,14 @@ use jsamhall\ShipEngine\Rating\RateId;
 class ShipEngine
 {
     /**
-     * Request Factory
-     *
-     * @var Api\RequestFactory
-     */
-    protected $requestFactory;
-
-    /**
      * @var Address\Factory
      */
     protected $addressFactory;
+
+    /**
+     * @var Client
+     */
+    protected $client;
 
     /**
      * ShipEngine constructor.
@@ -47,8 +48,15 @@ class ShipEngine
      */
     public function __construct(string $apiKey, Address\FormatterInterface $addressFormatter)
     {
-        $this->requestFactory = new Api\RequestFactory($apiKey);
         $this->addressFactory = new Address\Factory($addressFormatter);
+        $this->client = new Client([
+            'base_uri' => "https://api.shipengine.com/v1/",
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'API-Key'      => $apiKey,
+            ],
+            'debug'   => true
+        ]);
     }
 
     /**
