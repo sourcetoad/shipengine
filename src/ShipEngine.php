@@ -78,22 +78,35 @@ class ShipEngine
      * @param array $addresses Array of Address\Address or domain Addresses which are passed through the Formatter
      *
      * @return AddressVerification\VerificationResult[] Array of Verification Results for every address requested
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function validateAddresses(array $addresses)
     {
-        $addressData = array_map(function ($address) {
-            return $address instanceof Address\Address
-                ? $address->toArray()
-                : $this->addressFactory->factory($address)->toArray();
-        }, $addresses);
+        $addressData = $this->addressFactory->getAddressData($addresses);
 
-        $response = $this->requestFactory->validateAddresses($addressData)->send();
+        $response = $this->client->post('addresses/validate', [
+            'json' => $addressData
+        ]);
 
         return array_map(function ($data) {
             return new AddressVerification\VerificationResult($data);
-        }, $response->getData());
+        }, json_decode($response->getBody()->getContents(), 1));
+    }
+
+    /**
+     * @param array $address
+     * @return AddressVerification\VerificationResult
+     * @throws RequestException
+     * @throws ClientException
+     */
+    public function validateAddress(array $address)
+    {
+        $addressData = $this->addressFactory->getAddressData($address);
+
+        $response = $this->client->post('addresses/validate', ['json' => $addressData]);
+
+        return new AddressVerification\VerificationResult(json_decode($response->getBody()->getContents(), 1)[0]);
     }
 
     /**
@@ -102,16 +115,16 @@ class ShipEngine
      * @link https://docs.shipengine.com/docs/list-your-carriers
      *
      * @return Carriers\Carrier[]
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function listCarriers()
     {
-        $response = $this->requestFactory->listCarriers()->send();
+        $response = $this->client->get('carriers');
 
         return array_map(function ($carrier) {
             return new Carriers\Carrier($carrier);
-        }, $response->getData('carriers'));
+        }, json_decode($response->getBody()->getContents(), 1)['carriers']);
     }
 
     /**
@@ -119,28 +132,30 @@ class ShipEngine
      *
      * @param string $carrierId
      * @return Carriers\Carrier
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function getCarrier(string $carrierId)
     {
-        $response = $this->requestFactory->getCarrier($carrierId)->send();
+        $endpoint = sprintf("carriers/%s", $carrierId);
+        $response = $this->client->get($endpoint);
 
-        return new Carriers\Carrier($response->getData());
+        return new Carriers\Carrier(json_decode($response->getBody()->getContents(), 1));
     }
 
     /**
      * @param CarrierCode $carrierCode
      * @param string $carrierId
      * @return bool
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function removeCarrier(CarrierCode $carrierCode, string $carrierId): bool
     {
-        $response = $this->requestFactory->deleteCarrier($carrierCode, $carrierId)->send();
+        $endpoint = sprintf('connections/carriers/%1$s/%2$s', $carrierCode, $carrierId);
+        $response = $this->client->delete($endpoint);
 
-        return $response->isSuccessful();
+        return $response->getStatusCode();
     }
 
     /**
@@ -148,16 +163,17 @@ class ShipEngine
      *
      * @param string $carrierId
      * @return Carriers\Service[]
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function listCarrierServices(string $carrierId)
     {
-        $response = $this->requestFactory->listCarrierServices($carrierId)->send();
+        $endpoint = sprintf("carriers/%s/services", $carrierId);
+        $response = $this->client->get($endpoint);
 
         return array_map(function ($carrier) {
             return new Carriers\Service($carrier);
-        }, $response->getData('services'));
+        }, json_decode($response->getBody()->getContents(), 1)['services']);
     }
 
     /**
@@ -165,16 +181,17 @@ class ShipEngine
      *
      * @param string $carrierId
      * @return Carriers\PackageType[]
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function listCarrierPackageTypes(string $carrierId)
     {
-        $response = $this->requestFactory->listCarrierPackageTypes($carrierId)->send();
+        $endpoint = sprintf("carriers/%s/packages", $carrierId);
+        $response = $this->client->get($endpoint);
 
         return array_map(function ($carrier) {
             return new Carriers\PackageType($carrier);
-        }, $response->getData('packages'));
+        }, json_decode($response->getBody()->getContents(), 1)['packages']);
     }
 
     /**
@@ -182,16 +199,17 @@ class ShipEngine
      *
      * @param string $carrierId
      * @return Carriers\AvailableOption[]
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function getCarrierOptions(string $carrierId)
     {
-        $response = $this->requestFactory->getCarrierOptions($carrierId)->send();
+        $endpoint = sprintf("carriers/%s/options", $carrierId);
+        $response = $this->client->get($endpoint);
 
         return array_map(function ($carrier) {
             return new Carriers\AvailableOption($carrier);
-        }, $response->getData('options'));
+        }, json_decode($response->getBody()->getContents(), 1)['options']);
     }
 
     /**
@@ -200,8 +218,8 @@ class ShipEngine
      * @param Rating\Shipment $shipment
      * @param Rating\Options $rateOptions
      * @return Api\Response|Rating\RateResponse
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function getRates(Rating\Shipment $shipment, Rating\Options $rateOptions)
     {
@@ -209,9 +227,14 @@ class ShipEngine
             throw new \InvalidArgumentException("\$rateOptions cannot be empty");
         }
 
-        $response = $this->requestFactory->getShipmentRates($shipment, $rateOptions)->send();
+        $response = $this->client->post('rates', [
+            'json' => json_encode([
+                'shipment'     => $shipment->toArray(),
+                'rate_options' => $rateOptions->toArray()
+            ])
+        ]);
 
-        return new Rating\RateResponse($response->getData('rate_response'));
+        return new Rating\RateResponse(json_decode($response->getBody()->getContents(), 1)['rate_response']);
     }
 
     /**
@@ -219,14 +242,15 @@ class ShipEngine
      *
      * @param RateId $rateId
      * @return Rate
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function getRate(RateId $rateId): Rate
     {
-        $response = $this->requestFactory->getShipmentRate($rateId)->send();
+        $endpoint = 'rates/' . $rateId;
+        $response = $this->client->get($endpoint);
 
-        return new Rating\Rate($response->getData());
+        return new Rating\Rate(json_decode($response->getBody()->getContents(), 1));
     }
 
     /**
@@ -235,14 +259,19 @@ class ShipEngine
      * @param Labels\Shipment $shipment
      * @param bool $testMode
      * @return Labels\Response
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function createLabel(Labels\Shipment $shipment, $testMode = false)
     {
-        $response = $this->requestFactory->createLabel($shipment, $testMode)->send();
+        $response = $this->client->post('labels', [
+            'json' => json_encode([
+                'shipment'   => $shipment->toArray(),
+                'test_label' => $testMode
+            ])
+        ]);
 
-        return new Labels\Response($response->getData());
+        return new Labels\Response(json_decode($response->getBody()->getContents(), 1));
     }
 
     /**
@@ -251,27 +280,35 @@ class ShipEngine
      * @param Labels\RateLabel $rateLabel
      * @param bool $testMode
      * @return Labels\Response
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function createLabelFromRate(Labels\RateLabel $rateLabel, $testMode = false)
     {
-        $response = $this->requestFactory->createLabelFromRate($rateLabel, $testMode)->send();
+        $response = $this->client->post('labels/rates/' . (string) $rateLabel->getRateId(), [
+            'json' => json_encode([
+                'validate_address'    => $rateLabel->getAddressValidation(),
+                'label_layout'        => $rateLabel->getLabelLayout(),
+                'label_format'        => $rateLabel->getLabelFormat(),
+                'label_download_type' => $rateLabel->getLabelDownloadFormat(),
+                'test_label'          => $testMode,
+            ]),
+        ]);
 
-        return new Labels\Response($response->getData());
+        return new Labels\Response(json_decode($response->getBody()->getContents(), 1));
     }
 
     /**
      * @param LabelId $label
      * @return Labels\VoidResponse
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function voidLabel(LabelId $label)
     {
-        $response = $this->requestFactory->voidLabel($label)->send();
+        $response = $this->client->put('labels/' . (string) $label . '/void');
 
-        return new Labels\VoidResponse($response->getData());
+        return new Labels\VoidResponse(json_decode($response->getBody()->getContents(), 1));
     }
 
     /**
@@ -279,14 +316,16 @@ class ShipEngine
      *
      * @param StampsDotCom $stampsDotCom
      * @return CarrierId
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function connectStampsDotCom(StampsDotCom $stampsDotCom)
     {
-        $response = $this->requestFactory->connectStampsDotCom($stampsDotCom)->send();
+        $response = $this->client->post('connections/carriers/stamps_com', [
+            'json' => json_encode($stampsDotCom->toArray())
+        ]);
 
-        return new CarrierId($response->getData('carrier_id'));
+        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
     }
 
     /**
@@ -294,29 +333,33 @@ class ShipEngine
      *
      * @param UPS $UPS
      * @return CarrierId
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function connectUps(UPS $UPS): CarrierId
     {
-        $response = $this->requestFactory->connectUps($UPS)->send();
+        $response = $this->client->post('connections/carriers/ups', [
+            'json' => json_encode($UPS->toArray())
+        ]);
 
-        return new CarrierId($response->getData('carrier_id'));
+        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
     }
 
     /**
      * @param CarrierId $carrierId
      * @param UpsSettings $settings
      * @return Api\Response
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function adjustUps(CarrierId $carrierId, UpsSettings $settings)
     {
-        $response = $this->requestFactory->adjustUps($carrierId, $settings)->send();
+        $response = $this->client->put('connections/carriers/ups/' . $carrierId . '/settings', [
+            'json'  => json_encode($settings->toArray())
+        ]);
 
-        // todo - map response to whatever return is
-        return $response;
+        // 4/29/2020 TODO: fix response for UPS adjustments
+        return json_decode($response->getBody()->getContents(), 1);
     }
 
     /**
@@ -324,13 +367,15 @@ class ShipEngine
      *
      * @param FedEx $fedEx
      * @return CarrierId
-     * @throws Exception\ApiErrorResponse
-     * @throws Exception\ApiRequestFailed
+     * @throws RequestException
+     * @throws ClientException
      */
     public function connectFedEx(FedEx $fedEx): CarrierId
     {
-        $response = $this->requestFactory->connectFedEx($fedEx)->send();
+        $response = $this->client->post('connections/carriers/fedex', [
+            'json' => json_encode($fedEx->toArray())
+        ]);
 
-        return new CarrierId($response->getData('carrier_id'));
+        return new CarrierId(json_decode($response->getBody()->getContents(), 1)['carrier_id']);
     }
 }
