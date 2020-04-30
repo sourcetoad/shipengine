@@ -391,7 +391,7 @@ class ShipEngine
     {
         $response = json_decode($data->getBody()->getContents(), 1);
 
-        return $key == null
+        return $key === null
             ? $response
             : $response[$key];
     }
