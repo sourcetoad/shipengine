@@ -23,6 +23,9 @@ use jsamhall\ShipEngine\Labels\LabelId;
 use jsamhall\ShipEngine\Rating\Rate;
 use jsamhall\ShipEngine\Rating\RateId;
 use Psr\Http\Message\ResponseInterface;
+use jsamhall\ShipEngine\Address\Factory;
+use jsamhall\ShipEngine\Address\Address;
+use jsamhall\ShipEngine\Address\FormatterInterface;
 
 /**
  * Class ShipEngine
@@ -32,7 +35,7 @@ use Psr\Http\Message\ResponseInterface;
 class ShipEngine
 {
     /**
-     * @var Address\Factory
+     * @var Factory
      */
     protected $addressFactory;
 
@@ -45,26 +48,30 @@ class ShipEngine
      * ShipEngine constructor.
      *
      * @param string                     $apiKey
-     * @param Address\FormatterInterface $addressFormatter
+     * @param FormatterInterface $addressFormatter
+     * @param array                      $options
      */
-    public function __construct(string $apiKey, Address\FormatterInterface $addressFormatter)
+    public function __construct(string $apiKey, FormatterInterface $addressFormatter, array $options = [])
     {
-        $this->addressFactory = new Address\Factory($addressFormatter);
-        $this->client = new Client([
+        $defaultOptions = [
             'base_uri' => "https://api.shipengine.com/v1/",
             'headers' => [
                 'Content-Type' => 'application/json',
                 'API-Key'      => $apiKey,
             ],
             'debug'   => true
-        ]);
+        ];
+
+        $options = $options + $defaultOptions;
+        $this->addressFactory = new Factory($addressFormatter);
+        $this->client = new Client($options);
     }
 
     /**
      * Format an address using the Factory's Formatter
      *
      * @param mixed $address Domain address as expected by the Address\Formatter implementation
-     * @return Address\Address
+     * @return Address
      */
     public function formatAddress($address)
     {
