@@ -103,16 +103,18 @@ class ShipEngine
     }
 
     /**
-     * @param array $address
+     * @param Address $address
      * @return AddressVerification\VerificationResult
      * @throws RequestException
      * @throws ClientException
      */
-    public function validateAddress(array $address)
+    public function validateAddress(Address $address)
     {
-        $addressData = $this->addressFactory->getAddressData($address);
+        $addressData = $address->toArray();
 
-        $response = $this->client->post('addresses/validate', ['json' => $addressData]);
+        $response = $this->client->post('addresses/validate', [
+            'json' => $addressData
+        ]);
 
         return new AddressVerification\VerificationResult($this->getResponseData($response, 0));
     }
