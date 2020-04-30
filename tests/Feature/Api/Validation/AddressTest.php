@@ -63,7 +63,7 @@ class AddressTest extends \PHPUnit_Framework_TestCase
 
         $addressFormatter = new ArrayFormatter();
 
-        $shipEngineAddress = new ShipEngine("API_KEY_HERE", $addressFormatter, $mockOptions);
+        $shipEngineAddress = new ShipEngine("", $addressFormatter, $mockOptions);
 
         $response = $shipEngineAddress->validateAddress($address);
 
