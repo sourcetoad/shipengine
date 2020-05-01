@@ -59,7 +59,6 @@ class ShipEngine
                 'Content-Type' => 'application/json',
                 'API-Key'      => $apiKey,
             ],
-            'debug'   => true
         ];
 
         $options = $options + $defaultOptions;
