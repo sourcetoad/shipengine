@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Tests\Mocks\Validation;
 
 use GuzzleHttp\Exception\ClientException;
@@ -13,7 +12,7 @@ use jsamhall\ShipEngine\ShipEngine;
 
 class AddressMock
 {
-    public function mockValidationSuccess()
+    public function mockValidationSuccess(): ShipEngine
     {
         $addressResponse = [
             [
@@ -56,7 +55,7 @@ class AddressMock
         return new ShipEngine("", $addressFormatter, $mockOptions);
     }
 
-    public function mockValidationFailure()
+    public function mockValidationFailure(): ShipEngine
     {
         $mock = new MockHandler([new ClientException("Insufficient or Incorrect Address Data", new Request('POST', 'https://api.shipengine.com/v1/addresses/validate'))]);
         $mockStack = HandlerStack::create($mock);
