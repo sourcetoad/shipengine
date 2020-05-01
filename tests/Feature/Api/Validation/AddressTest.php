@@ -11,6 +11,7 @@ class AddressTest extends TestCase
 {
 
     public function testValidateAddress()
+    public function testValidateAddress(): void
     {
         //Arrange
         $address = new Address();
@@ -33,6 +34,7 @@ class AddressTest extends TestCase
     }
 
     public function testInsufficientValidation()
+    public function testInsufficientValidation(): void
     {
         //Arrange
         $address = new Address();
