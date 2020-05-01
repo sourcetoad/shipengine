@@ -2,10 +2,12 @@
 
 namespace Feature\Api\Validation;
 
+use GuzzleHttp\Exception\ClientException;
 use jsamhall\ShipEngine\Address\Address;
+use PHPUnit\Framework\TestCase;
 use Tests\Mocks\Validation\AddressMock;
 
-class AddressTest extends \PHPUnit_Framework_TestCase
+class AddressTest extends TestCase
 {
 
     public function testValidateAddress()
@@ -28,5 +30,17 @@ class AddressTest extends \PHPUnit_Framework_TestCase
         //Assert
         $this->assertSame(strtoupper($address->getAddressLine1()), $response->getMatchedAddress()->getAddressLine1());
         $this->assertSame(strtoupper($address->getCityLocality()), $response->getMatchedAddress()->getCityLocality());
+    }
+
+    public function testInsufficientValidation()
+    {
+        //Arrange
+        $address = new Address();
+        $shipEngineMock = new AddressMock();
+        $this->expectException(ClientException::class);
+        $request = $shipEngineMock->mockValidationFailure();
+
+        //Act
+        $request->validateAddress($address);
     }
 }
