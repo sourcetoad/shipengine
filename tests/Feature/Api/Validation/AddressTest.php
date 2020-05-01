@@ -10,10 +10,9 @@ use Tests\Mocks\Validation\AddressMock;
 class AddressTest extends TestCase
 {
 
-    public function testValidateAddress()
     public function testValidateAddress(): void
     {
-        //Arrange
+        // Arrange
         $address = new Address();
         $address->setAddressLine1("525 S Winchester Blvd")
             ->setCityLocality("San Jose")
@@ -25,24 +24,23 @@ class AddressTest extends TestCase
 
         $request = $shipEngineMock->mockValidationSuccess();
 
-        //Act
+        // Act
         $response = $request->validateAddress($address);
 
-        //Assert
+        // Assert
         $this->assertSame(strtoupper($address->getAddressLine1()), $response->getMatchedAddress()->getAddressLine1());
         $this->assertSame(strtoupper($address->getCityLocality()), $response->getMatchedAddress()->getCityLocality());
     }
 
-    public function testInsufficientValidation()
     public function testInsufficientValidation(): void
     {
-        //Arrange
+        // Arrange
         $address = new Address();
         $shipEngineMock = new AddressMock();
         $this->expectException(ClientException::class);
         $request = $shipEngineMock->mockValidationFailure();
 
-        //Act
+        // Act
         $request->validateAddress($address);
     }
 }
