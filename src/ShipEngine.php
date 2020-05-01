@@ -54,7 +54,7 @@ class ShipEngine
     public function __construct(string $apiKey, FormatterInterface $addressFormatter, array $options = [])
     {
         $defaultOptions = [
-            'base_uri' => "https://api.shipengine.com/v1/",
+            'base_uri' => 'https://api.shipengine.com/v1/',
             'headers' => [
                 'Content-Type' => 'application/json',
                 'API-Key'      => $apiKey,
