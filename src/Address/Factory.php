@@ -54,7 +54,7 @@ class Factory
             ->setAddressResidentialIndicator($formatted['address_residential_indicator'] ?? 'unknown');
     }
 
-    public function getAddressData($addresses)
+    public function getAddressData($addresses): array
     {
         return array_map(function ($address) {
             return $address instanceof Address
